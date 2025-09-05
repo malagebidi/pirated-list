@@ -40,11 +40,19 @@ jobs:
         if: steps.changed_files.outputs.any_changed == 'true'
         run: echo "RELEASE_TAG=$(date +'%Y-%m-%d-%H%M%S')" >> $GITHUB_ENV
 
-      - name: Combine files
+      - name: Combine files with conditional prefixing
         if: steps.changed_files.outputs.any_changed == 'true'
         run: |
-          echo "Files have changed, combining into pirated-list.txt..."
-          cat pirated-game.txt pirated-content.txt pirated-software.txt > pirated-list.txt
+          echo "Files have changed, processing and combining into pirated-list.txt..."
+          cat pirated-game.txt pirated-content.txt pirated-software.txt | \
+          awk -F '.' '{
+            if (NF == 2) {
+              print "+."$0
+            } else {
+              print $0
+            }
+          }' > pirated-list.txt
+          echo "File processing complete."
           ls -l pirated-list.txt
 
       - name: Create Release and Upload Asset
