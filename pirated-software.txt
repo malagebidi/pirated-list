@@ -1,2 +1,3 @@
 +.ghxi.com
 +.repack.me
++.positiverecords.ru
