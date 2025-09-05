@@ -1,3 +1,8 @@
+# Exact Matches
+cs.rin.ru
+
+# Wildcard Matches
++.elamigos.site
 +.fitgirl-repacks.site
 +.gamer520.com
 +.skidrowcodex.net
