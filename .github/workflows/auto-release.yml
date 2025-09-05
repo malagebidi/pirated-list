@@ -3,7 +3,7 @@ name: Create Release and Update Branch
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 3 * * *' # 您可以根据需要调整定时时间
+    - cron: '0 3 * * *'
 
 jobs:
   build-and-release:
@@ -56,19 +56,14 @@ jobs:
           sort -d -u > ./dist/pirated-list.txt
           echo "Generated pirated-list.txt in ./dist directory"
 
-      # 步骤 5: 将 dist 目录的内容发布到干净的 release 分支
-      # 这个 Action 会自动创建 'release' 分支（如果它不存在）
+      # 步骤 5: 将 dist 目录的内容发布到干净的 release 分支 (使用新 Action)
       - name: Deploy to release branch
         if: steps.changed_files.outputs.any_changed == 'true'
-        uses: peaceiris/actions-gh-pages@v4
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: release
-          publish_dir: ./dist
-          no_jekyll: false # 禁止创建 .nojekyll 文件
-          user_name: 'github-actions[bot]'
-          user_email: 'github-actions@github.com'
-          commit_message: 'Update pirated-list.txt'
+          branch: release # 部署到的分支
+          folder: dist   # 部署的文件夹
+          clean: true    # 部署前清空分支
 
       # 步骤 6: 生成发布标签
       - name: Generate release tag
