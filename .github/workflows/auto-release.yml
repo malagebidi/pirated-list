@@ -10,18 +10,17 @@ jobs:
     name: Build, Release, and Push to Branch
     runs-on: ubuntu-latest
     permissions:
-      # 需要 'write' 权限来创建 Release 和推送分支
       contents: write
 
     steps:
-      # 步骤 1: 检出 main 分支的代码以获取源文件
+      # 步骤 1: 检出 main 分支
       - name: Checkout main branch
         uses: actions/checkout@v4
         with:
-          ref: main # 明确指定检出 main 分支
+          ref: main
           fetch-depth: 0
 
-      # 步骤 2: 获取最新的 Release 标签 (用于比较)
+      # 步骤 2: 获取最新的 Release 标签
       - name: Get latest tag
         id: get_latest_tag
         run: |
@@ -41,21 +40,9 @@ jobs:
             pirated-software.txt
           base_sha: ${{ steps.get_latest_tag.outputs.tag_name || '' }}
 
-      # 如果没有变更，提前结束任务
-      - name: Log if no changes and stop
-        if: steps.changed_files.outputs.any_changed != 'true'
-        run: echo "No changes detected in source files since last release. Stopping workflow."
-
-      # 只有在文件有变更时，才执行以下所有步骤
-      - name: Run subsequent steps only if files changed
-        if: steps.changed_files.outputs.any_changed == 'true'
-        env:
-          FILES_CHANGED: "true"
-        run: echo "Source files have changed. Proceeding with build and release..."
-        
       # 步骤 4: 生成并处理文件
       - name: Combine, format, sort, and deduplicate files
-        if: env.FILES_CHANGED == 'true'
+        if: steps.changed_files.outputs.any_changed == 'true'
         run: |
           cat pirated-game.txt pirated-content.txt pirated-software.txt | \
           awk -F '.' '{
@@ -70,27 +57,26 @@ jobs:
 
       # 步骤 5: 将生成的文件推送到 release 分支
       - name: Push pirated-list.txt to release branch
-        if: env.FILES_CHANGED == 'true'
+        if: steps.changed_files.outputs.any_changed == 'true'
         uses: dmnemec/copy_file_to_another_repo_action@main
         env:
           API_TOKEN_GITHUB: ${{ secrets.GITHUB_TOKEN }}
         with:
           source_file: 'pirated-list.txt'
-          destination_repo: ${{ github.repository }} # 目标仓库 (即本仓库)
-          destination_branch: 'release' # 目标分支
+          destination_repo: ${{ github.repository }}
+          destination_branch: 'release'
           user_email: 'github-actions@github.com'
           user_name: 'github-actions[bot]'
           commit_message: 'Update pirated-list.txt'
 
       # 步骤 6: 生成发布标签
       - name: Generate release tag
-        if: env.FILES_CHANGED == 'true'
-        id: generate_tag
+        if: steps.changed_files.outputs.any_changed == 'true'
         run: echo "RELEASE_TAG=$(date +'%Y-%m-%d-%H%M%S')" >> $GITHUB_ENV
 
       # 步骤 7: 创建 GitHub Release
       - name: Create GitHub Release
-        if: env.FILES_CHANGED == 'true'
+        if: steps.changed_files.outputs.any_changed == 'true'
         uses: softprops/action-gh-release@v2
         with:
           files: pirated-list.txt
@@ -100,3 +86,8 @@ jobs:
             Automated release.
             This release contains the combined list from the source .txt files.
           prerelease: false
+
+      # 步骤 8: 如果没有变更则输出日志
+      - name: Log if no changes
+        if: steps.changed_files.outputs.any_changed != 'true'
+        run: echo "No changes detected in source files since last release. Skipping new release."
