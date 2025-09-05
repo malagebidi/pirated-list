@@ -1,4 +1,4 @@
-name: Create Scheduled or Manual Release
+name: Create Release and Update Branch
 
 on:
   workflow_dispatch:
@@ -7,17 +7,21 @@ on:
 
 jobs:
   build-and-release:
-    name: Build and Create Release
+    name: Build, Release, and Push to Branch
     runs-on: ubuntu-latest
     permissions:
+      # 需要 'write' 权限来创建 Release 和推送分支
       contents: write
 
     steps:
-      - name: Checkout repository
+      # 步骤 1: 检出 main 分支的代码以获取源文件
+      - name: Checkout main branch
         uses: actions/checkout@v4
         with:
+          ref: main # 明确指定检出 main 分支
           fetch-depth: 0
 
+      # 步骤 2: 获取最新的 Release 标签 (用于比较)
       - name: Get latest tag
         id: get_latest_tag
         run: |
@@ -26,7 +30,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Check for file changes
+      # 步骤 3: 检查源文件是否有变更
+      - name: Check for source file changes
         id: changed_files
         uses: tj-actions/changed-files@v44
         with:
@@ -36,14 +41,22 @@ jobs:
             pirated-software.txt
           base_sha: ${{ steps.get_latest_tag.outputs.tag_name || '' }}
 
-      - name: Generate release tag
-        if: steps.changed_files.outputs.any_changed == 'true'
-        run: echo "RELEASE_TAG=$(date +'%Y-%m-%d-%H%M%S')" >> $GITHUB_ENV
+      # 如果没有变更，提前结束任务
+      - name: Log if no changes and stop
+        if: steps.changed_files.outputs.any_changed != 'true'
+        run: echo "No changes detected in source files since last release. Stopping workflow."
 
-      - name: Combine, format, sort, and deduplicate files
+      # 只有在文件有变更时，才执行以下所有步骤
+      - name: Run subsequent steps only if files changed
         if: steps.changed_files.outputs.any_changed == 'true'
+        env:
+          FILES_CHANGED: "true"
+        run: echo "Source files have changed. Proceeding with build and release..."
+        
+      # 步骤 4: 生成并处理文件
+      - name: Combine, format, sort, and deduplicate files
+        if: env.FILES_CHANGED == 'true'
         run: |
-          echo "Files have changed. Processing started..."
           cat pirated-game.txt pirated-content.txt pirated-software.txt | \
           awk -F '.' '{
             if (NF == 2) {
@@ -53,11 +66,31 @@ jobs:
             }
           }' | \
           sort -d -u > pirated-list.txt
-          echo "File processing complete. Final list is sorted and deduplicated."
-          ls -l pirated-list.txt
+          echo "Generated pirated-list.txt"
 
-      - name: Create Release and Upload Asset
-        if: steps.changed_files.outputs.any_changed == 'true'
+      # 步骤 5: 将生成的文件推送到 release 分支
+      - name: Push pirated-list.txt to release branch
+        if: env.FILES_CHANGED == 'true'
+        uses: dmnemec/copy_file_to_another_repo_action@main
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          source_file: 'pirated-list.txt'
+          destination_repo: ${{ github.repository }} # 目标仓库 (即本仓库)
+          destination_branch: 'release' # 目标分支
+          user_email: 'github-actions@github.com'
+          user_name: 'github-actions[bot]'
+          commit_message: 'Update pirated-list.txt'
+
+      # 步骤 6: 生成发布标签
+      - name: Generate release tag
+        if: env.FILES_CHANGED == 'true'
+        id: generate_tag
+        run: echo "RELEASE_TAG=$(date +'%Y-%m-%d-%H%M%S')" >> $GITHUB_ENV
+
+      # 步骤 7: 创建 GitHub Release
+      - name: Create GitHub Release
+        if: env.FILES_CHANGED == 'true'
         uses: softprops/action-gh-release@v2
         with:
           files: pirated-list.txt
@@ -67,7 +100,3 @@ jobs:
             Automated release.
             This release contains the combined list from the source .txt files.
           prerelease: false
-          
-      - name: Log if no changes
-        if: steps.changed_files.outputs.any_changed != 'true'
-        run: echo "No changes detected in source files since last release. Skipping new release."
