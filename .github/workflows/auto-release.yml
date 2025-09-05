@@ -3,7 +3,7 @@ name: Create Release and Update Branch
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 3 * * *'
+    - cron: '0 3 * * *' # 您可以根据需要调整定时时间
 
 jobs:
   build-and-release:
@@ -57,6 +57,7 @@ jobs:
           echo "Generated pirated-list.txt in ./dist directory"
 
       # 步骤 5: 将 dist 目录的内容发布到干净的 release 分支
+      # 这个 Action 会自动创建 'release' 分支（如果它不存在）
       - name: Deploy to release branch
         if: steps.changed_files.outputs.any_changed == 'true'
         uses: peaceiris/actions-gh-pages@v4
@@ -64,8 +65,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: release
           publish_dir: ./dist
-          no_jekyll: false
-          # 默认会清空分支，所以不需要额外设置
+          no_jekyll: false # 禁止创建 .nojekyll 文件
           user_name: 'github-actions[bot]'
           user_email: 'github-actions@github.com'
           commit_message: 'Update pirated-list.txt'
@@ -80,7 +80,6 @@ jobs:
         if: steps.changed_files.outputs.any_changed == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          # 注意：附件文件现在位于 dist 目录中
           files: ./dist/pirated-list.txt
           name: Pirated List - ${{ env.RELEASE_TAG }}
           tag_name: ${{ env.RELEASE_TAG }}
