@@ -1,0 +1,65 @@
+# 工作流的名称
+name: Create Release From Text Files
+
+# 工作流的触发条件
+on:
+  push:
+    # 只在 main 分支发生 push 事件时触发
+    branches:
+      - main
+    # 只有当以下三个文件中的任何一个发生变化时才触发
+    paths:
+      - 'pirated-content.txt'
+      - 'pirated-game.txt'
+      - 'pirated-software.txt'
+
+# 定义工作流中的任务
+jobs:
+  build-and-release:
+    # 任务的名称
+    name: Build and Create Release
+    # 运行此任务的虚拟机环境
+    runs-on: ubuntu-latest
+    # 为此任务授予创建 Release 的权限
+    permissions:
+      contents: write
+
+    # 任务的执行步骤
+    steps:
+      # 步骤 1: 检出仓库代码
+      # 使用官方的 checkout action 来获取你的仓库代码
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 步骤 2: 生成发布标签
+      # 使用当前日期和时间创建一个唯一的标签名，例如 2025-09-05-061530
+      # 将这个标签名存入 GITHUB_ENV 环境变量，以便后续步骤使用
+      - name: Generate release tag
+        run: echo "RELEASE_TAG=$(date +'%Y-%m-%d-%H%M%S')" >> $GITHUB_ENV
+
+      # 步骤 3: 合并文件
+      # 使用 cat 命令将三个源文件的内容合并到一个名为 pirated-list 的新文件中
+      - name: Combine files
+        run: |
+          echo "Combining lists..."
+          cat pirated-game.txt pirated-content.txt pirated-software.txt > pirated-list
+          echo "Generated pirated-list file."
+          ls -l pirated-list # 打印文件信息以供调试
+
+      # 步骤 4: 创建 Release 并上传合并后的文件
+      # 使用 softprops/action-gh-release 这个流行的 action 来创建 Release
+      - name: Create Release and Upload Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          # 要上传的文件，即上一步生成的文件
+          files: pirated-list
+          # Release 的标题
+          name: Pirated List - ${{ env.RELEASE_TAG }}
+          # Git 标签的名称，使用我们之前生成的唯一标签
+          tag_name: ${{ env.RELEASE_TAG }}
+          # Release 的描述内容
+          body: |
+            Automated release.
+            This release contains the combined list from the source .txt files.
+          # 设置为 false，表示这是一个稳定的 Release，而不是预发布版
+          prerelease: false
