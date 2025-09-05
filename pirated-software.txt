@@ -1,4 +1,4 @@
-+.ghxi.com
-+.repack.me
-+.positiverecords.ru
-+.cybermania.ws
+cybermania.ws
+ghxi.com
+positiverecords.ru
+repack.me
