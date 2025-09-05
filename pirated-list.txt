@@ -1,6 +1,8 @@
 cs.rin.ru
 +.cybermania.ws
++.elamigosgames.org
 +.elamigos.site
++.feitu.tv
 +.fitgirl-repacks.site
 +.gamer520.com
 +.ghxi.com
@@ -15,6 +17,7 @@ cs.rin.ru
 +.olehdtv.com
 +.olevod.com
 +.positiverecords.ru
++.renren.pro
 +.repack.me
 +.skidrowcodex.net
 +.skidrowreloaded.com
