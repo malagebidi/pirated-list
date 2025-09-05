@@ -52,7 +52,7 @@ jobs:
               print $0
             }
           }' | \
-          sort -u > pirated-list.txt
+          sort -d -u > pirated-list.txt
           echo "File processing complete. Final list is sorted and deduplicated."
           ls -l pirated-list.txt
 
