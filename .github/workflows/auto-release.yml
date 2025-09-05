@@ -40,10 +40,11 @@ jobs:
             pirated-software.txt
           base_sha: ${{ steps.get_latest_tag.outputs.tag_name || '' }}
 
-      # 步骤 4: 生成并处理文件
+      # 步骤 4: 生成并处理文件到 dist 目录
       - name: Combine, format, sort, and deduplicate files
         if: steps.changed_files.outputs.any_changed == 'true'
         run: |
+          mkdir -p dist
           cat pirated-game.txt pirated-content.txt pirated-software.txt | \
           awk -F '.' '{
             if (NF == 2) {
@@ -52,21 +53,20 @@ jobs:
               print $0
             }
           }' | \
-          sort -d -u > pirated-list.txt
-          echo "Generated pirated-list.txt"
+          sort -d -u > ./dist/pirated-list.txt
+          echo "Generated pirated-list.txt in ./dist directory"
 
-      # 步骤 5: 将生成的文件推送到 release 分支
-      - name: Push pirated-list.txt to release branch
+      # 步骤 5: 将 dist 目录的内容发布到干净的 release 分支
+      - name: Deploy to release branch
         if: steps.changed_files.outputs.any_changed == 'true'
-        uses: dmnemec/copy_file_to_another_repo_action@main
-        env:
-          API_TOKEN_GITHUB: ${{ secrets.GITHUB_TOKEN }}
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          source_file: 'pirated-list.txt'
-          destination_repo: ${{ github.repository }}
-          destination_branch: 'release'
-          user_email: 'github-actions@github.com'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: release
+          publish_dir: ./dist
+          # 默认会清空分支，所以不需要额外设置
           user_name: 'github-actions[bot]'
+          user_email: 'github-actions@github.com'
           commit_message: 'Update pirated-list.txt'
 
       # 步骤 6: 生成发布标签
@@ -79,7 +79,8 @@ jobs:
         if: steps.changed_files.outputs.any_changed == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          files: pirated-list.txt
+          # 注意：附件文件现在位于 dist 目录中
+          files: ./dist/pirated-list.txt
           name: Pirated List - ${{ env.RELEASE_TAG }}
           tag_name: ${{ env.RELEASE_TAG }}
           body: |
