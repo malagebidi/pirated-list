@@ -64,6 +64,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: release
           publish_dir: ./dist
+          no_jekyll: false
           # 默认会清空分支，所以不需要额外设置
           user_name: 'github-actions[bot]'
           user_email: 'github-actions@github.com'
