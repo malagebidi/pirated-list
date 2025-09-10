@@ -1,9 +1,13 @@
 name: Create Release and Update Branch
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: '0 3 * * *'
+  workflow_dispatch:  # 保留手动触发
+  push:
+    branches: [main]
+    paths:
+      - 'pirated-content.txt'
+      - 'pirated-game.txt' 
+      - 'pirated-software.txt'
 
 jobs:
   build-and-release:
@@ -13,14 +17,14 @@ jobs:
       contents: write
 
     steps:
-      # 步骤 1: 检出 main 分支
+      # 检出代码
       - name: Checkout main branch
         uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
 
-      # 步骤 2: 获取最新的 Release 标签
+      # 获取最新Release标签
       - name: Get latest tag
         id: get_latest_tag
         run: |
@@ -29,20 +33,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 步骤 3: 检查源文件是否有变更
-      - name: Check for source file changes
-        id: changed_files
-        uses: tj-actions/changed-files@v44
-        with:
-          files: |
-            pirated-content.txt
-            pirated-game.txt
-            pirated-software.txt
-          base_sha: ${{ steps.get_latest_tag.outputs.tag_name || '' }}
-
-      # 步骤 4: 生成并处理文件到 dist 目录
+      # 生成和处理文件
       - name: Combine, format, sort, and deduplicate files
-        if: steps.changed_files.outputs.any_changed == 'true'
         run: |
           mkdir -p dist
           cat pirated-game.txt pirated-content.txt pirated-software.txt | \
@@ -56,34 +48,26 @@ jobs:
           sort -d -u > ./dist/pirated-list.txt
           echo "Generated pirated-list.txt in ./dist directory"
 
-      # 步骤 5: 将 dist 目录的内容发布到干净的 release 分支 (使用新 Action)
+      # 部署到release分支
       - name: Deploy to release branch
-        if: steps.changed_files.outputs.any_changed == 'true'
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          branch: release # 部署到的分支
-          folder: dist   # 部署的文件夹
-          clean: true    # 部署前清空分支
+          branch: release
+          folder: dist
+          clean: true
 
-      # 步骤 6: 生成发布标签
+      # 生成发布标签
       - name: Generate release tag
-        if: steps.changed_files.outputs.any_changed == 'true'
         run: echo "RELEASE_TAG=$(date +'%Y-%m-%d-%H%M%S')" >> $GITHUB_ENV
 
-      # 步骤 7: 创建 GitHub Release
+      # 创建GitHub Release
       - name: Create GitHub Release
-        if: steps.changed_files.outputs.any_changed == 'true'
         uses: softprops/action-gh-release@v2
         with:
           files: ./dist/pirated-list.txt
           name: Pirated List - ${{ env.RELEASE_TAG }}
           tag_name: ${{ env.RELEASE_TAG }}
           body: |
-            Automated release.
-            This release contains the combined list from the source .txt files.
+            Automated release triggered by source file changes.
+            This release contains the updated combined list.
           prerelease: false
-
-      # 步骤 8: 如果没有变更则输出日志
-      - name: Log if no changes
-        if: steps.changed_files.outputs.any_changed != 'true'
-        run: echo "No changes detected in source files since last release. Skipping new release."
