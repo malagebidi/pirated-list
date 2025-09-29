@@ -23,6 +23,7 @@ pan.baidu.com
 +.skidrowcodex.net
 +.skidrowreloaded.com
 +.thepiratebay.org
++.xdowns.com
 +.xxxxx528.com
 +.yfsp.tv
 +.yts.mx
