@@ -1,8 +1,8 @@
-# pirated-list
+# Pirated List
 
 This project manages a list of domains, used for mihomo project.
 
-## Purpose of this project
+## Purpose
 
 Block pirated software, games, movies, TV shows, and other similar content.
 
