@@ -26,5 +26,6 @@ pan.baidu.com
 +.xdowns.com
 +.xxxxx528.com
 +.yfsp.tv
++.yts.lt
 +.yts.mx
 +.yts-official.mx
